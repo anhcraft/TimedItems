@@ -26,8 +26,8 @@ public class Command extends BaseCommand {
     @CatchUnknown
     @Default
     public void help(CommandSender sender){
-        Chat.noPrefix().message(sender, "&a/ti set <unit> <duration>:&f add expiry time to an item")
-                .message(sender, "&a/ti del:&f remove expiry time")
+        Chat.noPrefix().message(sender, "&a/ti set <unit> <duration>:&f add expiry date to an item")
+                .message(sender, "&a/ti del:&f remove the expiry date")
                 .message(sender, "&a/ti unit:&f view all supported time unit")
                 .message(sender, "&a/ti reload:&f reload the configuration");
     }
