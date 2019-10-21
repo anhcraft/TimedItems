@@ -1,0 +1,6 @@
+name: TimedItems
+version: ${project.version}
+main: dev.anhcraft.timeditems.TimedItems
+depend: [CraftKit]
+authors: [anhcraft]
+description: Timed items
