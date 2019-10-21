@@ -42,8 +42,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public final class TimedItems extends JavaPlugin implements Listener {
-    private static File configFile;
-    public static Config config;
+    private File configFile;
+    public Config config;
     private final TaskHelper taskHelper = new TaskHelper(this);
     public final Chat chat = new Chat("&b&l[TI] &r&f");
     private final Map<Integer, TimedHolo> TIMED_HOLO = new ConcurrentHashMap<>();

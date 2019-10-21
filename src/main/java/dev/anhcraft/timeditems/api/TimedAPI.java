@@ -34,9 +34,9 @@ public class TimedAPI {
         ItemHelper im = ItemHelper.of(item);
         List<String> lore = im.getLore();
         lore.removeIf(l -> {
-            return l.startsWith(TimedItems.config.getExpiryDateLorePrefix()) || l.startsWith(TimedItems.config.getExpiryDurationLorePrefix());
+            return l.startsWith(plugin.config.getExpiryDateLorePrefix()) || l.startsWith(plugin.config.getExpiryDurationLorePrefix());
         });
-        lore.add(TimedItems.config.getExpiryDurationLorePrefix() + value + " " + TimedItems.config.getUnit(unit) + TimedItems.config.getExpiryDurationLoreSuffix());
+        lore.add(plugin.config.getExpiryDurationLorePrefix() + value + " " + plugin.config.getUnit(unit) + plugin.config.getExpiryDurationLoreSuffix());
         item = im.setLore(lore).save();
 
         CompoundTag root = CompoundTag.of(item);
@@ -56,7 +56,7 @@ public class TimedAPI {
         ItemHelper im = ItemHelper.of(item);
         List<String> lore = im.getLore();
         lore.removeIf(l -> {
-            return l.startsWith(TimedItems.config.getExpiryDateLorePrefix()) || l.startsWith(TimedItems.config.getExpiryDurationLorePrefix());
+            return l.startsWith(plugin.config.getExpiryDateLorePrefix()) || l.startsWith(plugin.config.getExpiryDurationLorePrefix());
         });
         im.setLore(lore);
         item = im.save();
@@ -123,8 +123,8 @@ public class TimedAPI {
 
         ItemHelper im = ItemHelper.of(item);
         List<String> lore = im.getLore();
-        lore.removeIf(l -> l.startsWith(TimedItems.config.getExpiryDurationLorePrefix()));
-        lore.add(TimedItems.config.getExpiryDateLorePrefix() + date + TimedItems.config.getExpiryDateLoreSuffix());
+        lore.removeIf(l -> l.startsWith(plugin.config.getExpiryDurationLorePrefix()));
+        lore.add(plugin.config.getExpiryDateLorePrefix() + date + plugin.config.getExpiryDateLoreSuffix());
         im.setLore(lore);
         return im.save();
     }
