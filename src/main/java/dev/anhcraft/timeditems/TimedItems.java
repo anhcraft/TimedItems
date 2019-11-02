@@ -152,6 +152,7 @@ public final class TimedItems extends JavaPlugin implements Listener {
                     extension.untrackEntity(tas);
                     tas.kill();
                     it.remove();
+                    item.remove();
                     continue;
                 }
                 ArmorStand as = e.getValue().getArmorStand().getEntity();

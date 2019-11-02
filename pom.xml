@@ -6,7 +6,7 @@
 
     <groupId>dev.anhcraft</groupId>
     <artifactId>timeditems</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
 
     <name>TimedItems</name>
@@ -93,7 +93,7 @@
         <dependency>
             <groupId>dev.anhcraft</groupId>
             <artifactId>craftkit.spigot</artifactId>
-            <version>1.1.3</version>
+            <version>1.1.4</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

@@ -28,7 +28,7 @@ public class TimedAPI {
     }
 
     @NotNull
-    public ItemStack setTimed(@NotNull ItemStack item, @NotNull TimeUnit unit, int value) {
+    public ItemStack setTimed(@NotNull ItemStack item, @NotNull TimeUnit unit, int duration) {
         Preconditions.checkNotNull(item);
         Preconditions.checkNotNull(unit);
         ItemHelper im = ItemHelper.of(item);
@@ -36,14 +36,14 @@ public class TimedAPI {
         lore.removeIf(l -> {
             return l.startsWith(plugin.config.getExpiryDateLorePrefix()) || l.startsWith(plugin.config.getExpiryDurationLorePrefix());
         });
-        lore.add(plugin.config.getExpiryDurationLorePrefix() + value + " " + plugin.config.getUnit(unit) + plugin.config.getExpiryDurationLoreSuffix());
+        lore.add(plugin.config.getExpiryDurationLorePrefix() + duration + " " + plugin.config.getUnit(unit) + plugin.config.getExpiryDurationLoreSuffix());
         item = im.setLore(lore).save();
 
         CompoundTag root = CompoundTag.of(item);
         CompoundTag tag = root.getOrCreateDefault("tag", CompoundTag.class);
         CompoundTag expDurTag = new CompoundTag();
         expDurTag.put("unit", unit.toString());
-        expDurTag.put("value", value);
+        expDurTag.put("value", duration);
         tag.put("expiry_duration", expDurTag);
         tag.remove("expiry_date");
         root.put("tag", tag);

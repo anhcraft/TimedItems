@@ -2,7 +2,7 @@ package dev.anhcraft.timeditems.util;
 
 import java.util.*;
 
-public enum  TimeUnit {
+public enum TimeUnit {
     MILLISECOND(1),
     TICK(50),
     SECOND(1000),
