@@ -121,6 +121,10 @@ public class TimedAPI {
         root.put("tag", tag);
         item = root.save(item);
 
+        if(!plugin.config.isShowExpiryDate()){
+            return item;
+        }
+
         ItemHelper im = ItemHelper.of(item);
         List<String> lore = im.getLore();
         lore.removeIf(l -> l.startsWith(plugin.config.getExpiryDurationLorePrefix()));
