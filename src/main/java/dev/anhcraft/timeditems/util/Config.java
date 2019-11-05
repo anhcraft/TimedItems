@@ -39,6 +39,9 @@ public class Config {
     @IgnoreValue(ifNull = true)
     private String expiryDurationLoreSuffix = "&f&l]";
 
+    @Key("expiry_date_lore.enabled")
+    private boolean showExpiryDate;
+
     @Key("expiry_date_lore.prefix")
     @IgnoreValue(ifNull = true)
     private String expiryDateLorePrefix = "&f&l[&e&lExpiry date: &b&l";
@@ -144,5 +147,9 @@ public class Config {
 
     public boolean isTimedHoloEnabled() {
         return timedHoloEnabled;
+    }
+
+    public boolean isShowExpiryDate() {
+        return showExpiryDate;
     }
 }
