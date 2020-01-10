@@ -4,14 +4,14 @@ import dev.anhcraft.craftkit.entity.ArmorStand;
 import dev.anhcraft.craftkit.entity.TrackedEntity;
 import org.bukkit.entity.Item;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class TimedHolo {
+public class TimedItemEntity {
     private Item item;
     private TrackedEntity<ArmorStand> armorStand;
 
-    public TimedHolo(@NotNull Item item, @NotNull TrackedEntity<ArmorStand> armorStand) {
+    public TimedItemEntity(@NotNull Item item) {
         this.item = item;
-        this.armorStand = armorStand;
     }
 
     @NotNull
@@ -19,8 +19,12 @@ public class TimedHolo {
         return item;
     }
 
-    @NotNull
+    @Nullable
     public TrackedEntity<ArmorStand> getArmorStand() {
         return armorStand;
+    }
+
+    public void setArmorStand(@Nullable TrackedEntity<ArmorStand> armorStand) {
+        this.armorStand = armorStand;
     }
 }

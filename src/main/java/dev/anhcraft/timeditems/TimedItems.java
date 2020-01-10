@@ -17,7 +17,8 @@ import dev.anhcraft.timeditems.api.TimedAPI;
 import dev.anhcraft.timeditems.cmd.Command;
 import dev.anhcraft.timeditems.util.Config;
 import dev.anhcraft.timeditems.util.TimeUnit;
-import dev.anhcraft.timeditems.util.TimedHolo;
+import dev.anhcraft.timeditems.util.TimedItemEntity;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -42,14 +43,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public final class TimedItems extends JavaPlugin implements Listener {
-    private File configFile;
-    public Config config;
     private final TaskHelper taskHelper = new TaskHelper(this);
     public final Chat chat = new Chat("&b&l[TI] &r&f");
-    private final Map<Integer, TimedHolo> TIMED_HOLO = new ConcurrentHashMap<>();
-    public SimpleDateFormat dateFormat;
+    private final Map<Integer, TimedItemEntity> TIMED_ITEMS = new ConcurrentHashMap<>();
+    private File configFile;
+    public Config config;
     public TimedAPI api;
+    public SimpleDateFormat dateFormat;
     private CraftExtension extension;
+    private final Object LOCK = new Object();
 
     public void reload(){
         getDataFolder().mkdir();
@@ -79,6 +81,74 @@ public final class TimedItems extends JavaPlugin implements Listener {
             }
         }
         dateFormat = new SimpleDateFormat(config.getDateFormat());
+        if(config.isTimedHoloEnabled()){
+            for(TimedItemEntity tte : TIMED_ITEMS.values()){
+                setArmorStand(tte);
+            }
+        } else {
+            for(TimedItemEntity tte : TIMED_ITEMS.values()){
+                removeArmorStand(tte);
+            }
+        }
+    }
+
+    private void setArmorStand(TimedItemEntity tte){
+        if(tte.getArmorStand() != null) return;
+        synchronized (LOCK) {
+            ArmorStand as = ArmorStand.spawn(tte.getItem().getLocation());
+            as.setNameVisible(true);
+            as.setVisible(false);
+            TrackedEntity<ArmorStand> te = extension.trackEntity(as);
+            te.setViewDistance(100);
+            // due to some bug, dont use #setViewers
+            for (Player p : Bukkit.getOnlinePlayers()){
+                te.addViewer(p);
+            }
+            te.getEntity().sendUpdate();
+            tte.setArmorStand(te);
+        }
+    }
+
+    private void removeArmorStand(TimedItemEntity tte){
+        if (tte.getArmorStand() == null) return;
+        synchronized (LOCK) {
+            extension.untrackEntity(tte.getArmorStand());
+            tte.getArmorStand().kill();
+            tte.setArmorStand(null);
+        }
+    }
+
+    private void addItem(Item item){
+        ItemStack itemStack = item.getItemStack();
+        if(api.getExpiryDate(itemStack) == -1) return;
+        TimedItemEntity tte = new TimedItemEntity(item);
+        TIMED_ITEMS.put(item.getEntityId(), tte);
+        if(config.isTimedHoloEnabled()){
+            setArmorStand(tte);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void drop(PlayerDropItemEvent event){
+        addItem(event.getItemDrop());
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void pickup(EntityPickupItemEvent event){
+        Item item = event.getItem();
+        TimedItemEntity th = TIMED_ITEMS.remove(item.getEntityId());
+        if(th != null) {
+            removeArmorStand(th);
+        }
+    }
+
+    @EventHandler
+    public void join(PlayerJoinEvent event){
+        for(TimedItemEntity t : TIMED_ITEMS.values()){
+            if(t.getArmorStand() != null){
+                t.getArmorStand().addViewer(event.getPlayer());
+            }
+        }
     }
 
     @Override
@@ -88,6 +158,7 @@ public final class TimedItems extends JavaPlugin implements Listener {
         reload();
 
         getServer().getPluginManager().registerEvents(this, this);
+        new Metrics(this);
 
         PaperCommandManager pcm = new PaperCommandManager(this);
         pcm.registerCommand(new Command(this));
@@ -139,35 +210,37 @@ public final class TimedItems extends JavaPlugin implements Listener {
             }
         }, 0, 60);
 
+        ServerUtil.getAllEntitiesByClass(Item.class, this::addItem);
+
         taskHelper.newAsyncTimerTask(() -> {
-            if(!config.isTimedHoloEnabled()) return;
-            for (Iterator<Map.Entry<Integer, TimedHolo>> it = TIMED_HOLO.entrySet().iterator(); it.hasNext(); ) {
-                Map.Entry<Integer, TimedHolo> e = it.next();
+            for (Iterator<Map.Entry<Integer, TimedItemEntity>> it = TIMED_ITEMS.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<Integer, TimedItemEntity> e = it.next();
                 Item item = e.getValue().getItem();
                 ItemStack itemStack = item.getItemStack();
                 long expiryDate = api.getExpiryDate(itemStack);
                 long delta = System.currentTimeMillis() - expiryDate;
-                TrackedEntity<ArmorStand> tas = e.getValue().getArmorStand();
                 if(item.isDead() || delta >= 0){
-                    extension.untrackEntity(tas);
-                    tas.kill();
-                    it.remove();
+                    removeArmorStand(e.getValue());
                     item.remove();
+                    it.remove();
                     continue;
                 }
-                ArmorStand as = e.getValue().getArmorStand().getEntity();
-                StringBuilder s = new StringBuilder();
-                TreeMap<TimeUnit, Long> map = TimeUnit.format(TimeUnit.MILLISECOND, -delta, config.getTimedHoloUnits());
-                for(Map.Entry<TimeUnit, Long> ent : map.entrySet()){
-                    if(ent.getValue() == 0) continue;
-                    s.append(ent.getValue()).append(" ").append(config.getUnit(ent.getKey())).append(" ");
-                }
-                as.setName(String.format(config.getTimedHoloMsg(), s.toString()));
-                as.sendUpdate();
-                Location loc = item.getLocation();
-                double dis = loc.distanceSquared(tas.getLocation());
-                if(dis >= 2){
-                    tas.teleport(loc.subtract(0, 1.4, 0));
+                if(e.getValue().getArmorStand() != null) {
+                    TrackedEntity<ArmorStand> tas = e.getValue().getArmorStand();
+                    ArmorStand as = tas.getEntity();
+                    StringBuilder s = new StringBuilder();
+                    TreeMap<TimeUnit, Long> map = TimeUnit.format(TimeUnit.MILLISECOND, -delta, config.getTimedHoloUnits());
+                    for (Map.Entry<TimeUnit, Long> ent : map.entrySet()) {
+                        if (ent.getValue() == 0) continue;
+                        s.append(ent.getValue()).append(" ").append(config.getUnit(ent.getKey())).append(" ");
+                    }
+                    as.setName(String.format(config.getTimedHoloMsg(), s.toString()));
+                    as.sendUpdate();
+                    Location loc = item.getLocation();
+                    double dis = loc.distanceSquared(tas.getLocation());
+                    if (dis >= 2) {
+                        tas.teleport(loc.subtract(0, 1.4, 0));
+                    }
                 }
             }
         }, 0, 20);
@@ -180,43 +253,5 @@ public final class TimedItems extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         CraftExtension.unregister(TimedItems.class);
-    }
-
-    private void addItem(Item item){
-        ItemStack itemStack = item.getItemStack();
-        if(api.getExpiryDate(itemStack) == -1) return;
-        ArmorStand as = ArmorStand.spawn(item.getLocation());
-        as.setNameVisible(true);
-        as.setVisible(false);
-        TrackedEntity<ArmorStand> te = extension.trackEntity(as);
-        te.setViewDistance(100);
-        te.setViewers(new ArrayList<>(Bukkit.getOnlinePlayers()));
-        te.getEntity().sendUpdate();
-        TIMED_HOLO.put(item.getEntityId(), new TimedHolo(item, te));
-    }
-
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
-    public void drop(PlayerDropItemEvent event){
-        if(!config.isTimedHoloEnabled()) return;
-        addItem(event.getItemDrop());
-    }
-
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
-    public void pickup(EntityPickupItemEvent event){
-        if(!config.isTimedHoloEnabled()) return;
-        Item item = event.getItem();
-        TimedHolo th = TIMED_HOLO.remove(item.getEntityId());
-        if(th != null){
-            extension.untrackEntity(th.getArmorStand());
-            th.getArmorStand().kill();
-        }
-    }
-
-    @EventHandler
-    public void join(PlayerJoinEvent event){
-        if(!config.isTimedHoloEnabled()) return;
-        for(TimedHolo t : TIMED_HOLO.values()){
-            t.getArmorStand().addViewer(event.getPlayer());
-        }
     }
 }
